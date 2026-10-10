@@ -16,7 +16,7 @@ Production:
 
 ```bash
 npm run build
-npm run start                # http://localhost:3110
+npm run start                # http://localhost:3000 (or $PORT)
 ```
 
 Production mode is much faster than `npm run dev`. Use it when judging 3D performance.

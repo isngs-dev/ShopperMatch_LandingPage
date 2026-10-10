@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: shopper-match-landing
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM_EMAIL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: GOOGLE_CALENDAR_ID
+        value: primary
