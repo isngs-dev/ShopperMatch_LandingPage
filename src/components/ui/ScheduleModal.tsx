@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import Button from "@/components/ui/Button";
-import { MEETING_MINUTES, type MeetingChoice } from "@/lib/demoRequest";
+import { MEETING_MINUTES, MEETING_TZ, todayIn, zonedTimeToUtc, type MeetingChoice } from "@/lib/demoRequest";
 
 type Props = {
   busy: boolean;
@@ -35,18 +35,19 @@ export default function ScheduleModal({ busy, error, onBook, onSkip, onClose }: 
   const [busy_, setBusy] = useState<{ start: number; end: number }[]>([]);
   const [checking, setChecking] = useState(false);
 
-  const tz = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", []);
+  const tz = MEETING_TZ;
   const minDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }, []);
+    const [y, m, d] = todayIn(tz).split("-").map(Number);
+    const next = new Date(Date.UTC(y, m - 1, d + 1));
+    return next.toISOString().slice(0, 10);
+  }, [tz]);
 
   // Load the organiser's busy times for the chosen day so taken slots can be greyed out
   useEffect(() => {
     if (!date) return;
-    const from = new Date(`${date}T00:00:00`);
-    const to = new Date(from.getTime() + 24 * 60 * 60 * 1000);
+    const from = zonedTimeToUtc(date, "00:00", tz);
+    const nextDay = new Date(Date.parse(`${date}T00:00:00Z`) + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const to = zonedTimeToUtc(nextDay, "00:00", tz);
     const ctl = new AbortController();
     setChecking(true);
     fetch(`/api/availability?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`, { signal: ctl.signal })
@@ -66,7 +67,7 @@ export default function ScheduleModal({ busy, error, onBook, onSkip, onClose }: 
 
   const isTaken = (slot: string) => {
     if (!date) return false;
-    const start = new Date(`${date}T${slot}:00`).getTime();
+    const start = zonedTimeToUtc(date, slot, tz).getTime();
     const end = start + MEETING_MINUTES * 60_000;
     return busy_.some((b) => start < b.end && end > b.start);
   };
@@ -113,7 +114,7 @@ export default function ScheduleModal({ busy, error, onBook, onSkip, onClose }: 
 
   const book = () => {
     if (!date || !time) return;
-    onBook({ startISO: new Date(`${date}T${time}:00`).toISOString(), timeZone: tz });
+    onBook({ startISO: zonedTimeToUtc(date, time, tz).toISOString(), timeZone: tz });
   };
 
   const field =
@@ -173,7 +174,7 @@ export default function ScheduleModal({ busy, error, onBook, onSkip, onClose }: 
               ))}
             </select>
             <p className="mt-1.5 text-xs text-[#84592b]">
-              {checking ? "Checking availability…" : `Times shown in your time zone (${tz}). Greyed-out times are taken.`}
+              {checking ? "Checking availability…" : "Times shown in Eastern Time (ET). Greyed-out times are taken."}
             </p>
           </div>
         </div>

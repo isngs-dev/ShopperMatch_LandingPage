@@ -1,5 +1,5 @@
 import "server-only";
-import { MEETING_MINUTES, type DemoRequest } from "@/lib/demoRequest";
+import { MEETING_MINUTES, formatMeeting, type DemoRequest } from "@/lib/demoRequest";
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -8,11 +8,10 @@ const icsEscape = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").r
 const icsDate = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 
 function formatWhen(startISO: string, timeZone: string) {
-  const opts: Intl.DateTimeFormatOptions = { dateStyle: "full", timeStyle: "short" };
   try {
-    return new Intl.DateTimeFormat("en-US", { ...opts, timeZone }).format(new Date(startISO)) + ` (${timeZone})`;
+    return formatMeeting(startISO, timeZone);
   } catch {
-    return new Intl.DateTimeFormat("en-US", { ...opts, timeZone: "UTC" }).format(new Date(startISO)) + " (UTC)";
+    return formatMeeting(startISO, "UTC");
   }
 }
 

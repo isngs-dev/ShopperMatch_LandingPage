@@ -8,7 +8,7 @@ import LazyCanvas from "@/components/ui/LazyCanvas";
 import Button from "@/components/ui/Button";
 import Mesh from "@/components/ui/Mesh";
 import ScheduleModal from "@/components/ui/ScheduleModal";
-import { contactSchema, type ContactValues, type MeetingChoice } from "@/lib/demoRequest";
+import { contactSchema, formatMeeting, type ContactValues, type MeetingChoice } from "@/lib/demoRequest";
 import { FadeUp, RevealHeading } from "@/components/ui/Reveal";
 import { useQuality } from "@/hooks/useQuality";
 
@@ -173,9 +173,7 @@ export default function FormSection() {
         return;
       }
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-      const when = meeting
-        ? new Intl.DateTimeFormat("en-US", { dateStyle: "full", timeStyle: "short", timeZone: meeting.timeZone }).format(new Date(meeting.startISO))
-        : null;
+      const when = meeting ? formatMeeting(meeting.startISO, meeting.timeZone) : null;
       setDone({ name: pending.name, when });
       setPending(null);
     } catch (err) {

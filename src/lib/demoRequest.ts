@@ -31,3 +31,38 @@ export const demoRequestSchema = contactSchema.extend({
 export type DemoRequest = z.infer<typeof demoRequestSchema>;
 
 export const MEETING_MINUTES = 30;
+
+/** All demo slots are offered in US Eastern Time (EST in winter, EDT in summer). */
+export const MEETING_TZ = "America/New_York";
+
+/** Converts a wall-clock date ("YYYY-MM-DD") and time ("HH:mm") in `tz` to the UTC instant. */
+export function zonedTimeToUtc(date: string, time: string, tz: string = MEETING_TZ): Date {
+  const [y, mo, d] = date.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  const wanted = Date.UTC(y, mo - 1, d, h, mi);
+  const offsetAt = (ms: number) => {
+    const p = Object.fromEntries(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: tz, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric",
+      }).formatToParts(new Date(ms)).map((x) => [x.type, x.value]),
+    );
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - ms;
+  };
+  let ms = wanted - offsetAt(wanted);
+  ms = wanted - offsetAt(ms); // second pass handles DST boundaries
+  return new Date(ms);
+}
+
+/** "Friday, October 16, 2026 at 3:30 AM EDT" */
+export function formatMeeting(startISO: string, tz: string = MEETING_TZ): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
+  }).formatToParts(new Date(startISO));
+  const g = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+  return `${g("weekday")}, ${g("month")} ${g("day")}, ${g("year")} at ${g("hour")}:${g("minute")} ${g("dayPeriod")} ${g("timeZoneName")}`;
+}
+
+/** Today's date in `tz` as YYYY-MM-DD. */
+export function todayIn(tz: string = MEETING_TZ): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
