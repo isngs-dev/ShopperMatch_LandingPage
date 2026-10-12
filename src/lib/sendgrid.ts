@@ -1,5 +1,8 @@
 import "server-only";
 import { MEETING_MINUTES, formatMeeting, type DemoRequest } from "@/lib/demoRequest";
+import {
+  buildHtml, buildSubject, buildTeamHtml, buildTeamSubject, buildTeamText, buildText, type EmailInput,
+} from "@/lib/emailTemplate";
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -52,19 +55,17 @@ export async function sendConfirmationEmail(req: DemoRequest, meetLink = ""): Pr
 
   const booked = !!req.meeting;
   const when = booked ? formatWhen(req.meeting!.startISO, req.meeting!.timeZone) : "";
-  const first = req.name.split(" ")[0];
 
-  const subject = booked
-    ? "Your Shopper Match.AI demo is booked"
-    : "We received your Shopper Match.AI demo request";
-
-  const text = booked
-    ? `Hi ${first},\n\nYour Shopper Match.AI demo is booked.\n\nWhen: ${when}\nDuration: ${MEETING_MINUTES} minutes\nMeeting link: ${link}\n\nA calendar invite is attached.\n\niSN`
-    : `Hi ${first},\n\nThank you for your interest in Shopper Match.AI. We received your demo request and will be in touch shortly.\n\niSN`;
-
-  const html = booked
-    ? `<div style="font-family:Arial,sans-serif;color:#442D1C;line-height:1.6"><p>Hi ${esc(first)},</p><p>Your Shopper Match.AI demo is booked.</p><p><strong>When:</strong> ${esc(when)}<br><strong>Duration:</strong> ${MEETING_MINUTES} minutes</p><p><a href="${esc(link)}" style="display:inline-block;background:#84592B;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:bold">Join the meeting</a></p><p style="font-size:13px;color:#743014">Or open: ${esc(link)}<br>A calendar invite is attached.</p><p>iSN</p></div>`
-    : `<div style="font-family:Arial,sans-serif;color:#442D1C;line-height:1.6"><p>Hi ${esc(first)},</p><p>Thank you for your interest in Shopper Match.AI. We received your demo request and will be in touch shortly.</p><p>iSN</p></div>`;
+  const input: EmailInput = {
+    name: req.name,
+    company: req.company,
+    email: req.email,
+    phone: req.phone,
+    booking: booked ? { when, minutes: MEETING_MINUTES, link } : undefined,
+  };
+  const subject = buildSubject(input);
+  const text = buildText(input);
+  const html = buildHtml(input);
 
   if (!apiKey || !fromEmail || (booked && !link)) {
     if (process.env.NODE_ENV === "production") {
@@ -76,7 +77,11 @@ export async function sendConfirmationEmail(req: DemoRequest, meetLink = ""): Pr
 
   const body: Record<string, unknown> = {
     personalizations: [{ to: [{ email: req.email, name: req.name }] }],
-    from: { email: fromEmail, name: "Shopper Match.AI" },
+    from: { email: fromEmail, name: process.env.SENDGRID_FROM_NAME || "Shopper Match.AI" },
+    reply_to: { email: fromEmail },
+    categories: ["demo-confirmation"],
+    // Plain links (no rewritten tracking URLs / pixel): looks less like marketing mail and keeps the Meet URL intact
+    tracking_settings: { click_tracking: { enable: false, enable_text: false }, open_tracking: { enable: false } },
     subject,
     content: [
       { type: "text/plain", value: text },
@@ -100,5 +105,37 @@ export async function sendConfirmationEmail(req: DemoRequest, meetLink = ""): Pr
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`SendGrid responded ${res.status}: ${await res.text()}`);
+
+  // Internal copy for the iSN team. A failure here must not fail the visitor's booking.
+  try {
+    await sendTeamNotification(input, apiKey, fromEmail);
+  } catch (err) {
+    console.error("[sendgrid] team notification failed", err);
+  }
   return { sent: true, dryRun: false };
+}
+
+/** Goes to NOTIFY_EMAIL (comma-separated), falling back to the sender address. Reply-to is the visitor. */
+async function sendTeamNotification(input: EmailInput, apiKey: string, fromEmail: string) {
+  const recipients = (process.env.NOTIFY_EMAIL || fromEmail)
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+  const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      personalizations: [{ to: recipients.map((email) => ({ email })) }],
+      from: { email: fromEmail, name: process.env.SENDGRID_FROM_NAME || "Shopper Match.AI" },
+      reply_to: { email: input.email, name: input.name },
+      categories: ["demo-team-notification"],
+      tracking_settings: { click_tracking: { enable: false, enable_text: false }, open_tracking: { enable: false } },
+      subject: buildTeamSubject(input),
+      content: [
+        { type: "text/plain", value: buildTeamText(input) },
+        { type: "text/html", value: buildTeamHtml(input) },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`SendGrid responded ${res.status}: ${await res.text()}`);
 }
