@@ -26,16 +26,20 @@ export type EmailInput = {
 
 export type Rendered = { subject: string; text: string; html: string };
 
+// Website theme: deep cocoa page, cocoa card, golden-batter accents, caramel button, white headings.
 const C = {
-  paper: "#f6efe6",
-  card: "#ffffff",
-  panel: "#f8f2e9",
-  ink: "#2a211b",
-  muted: "#675a4f",
-  line: "#e6d9c8",
-  blue: "#2f66d4",
-  blueSoft: "#e8eefb",
-  cta: "#b4531f",
+  paper: "#20130b",
+  card: "#2b1a0f",
+  panel: "#3a2616",
+  ink: "#ffffff",
+  muted: "#eadbc0",
+  label: "#cdb88f",
+  line: "#4a3220",
+  blue: "#e8d1a7", // links and badge text (golden batter)
+  blueSoft: "#4a3220", // badge background
+  cta: "#84592b", // toasted caramel button
+  ctaBorder: "#c98a4b",
+  logo: "#2f5bb7", // iSN blue, shown on a white chip like the website navbar
 };
 const FONT = "Arial,Helvetica,sans-serif";
 const PRODUCT = "Shopper Match.AI";
@@ -46,22 +50,22 @@ const REASON =
 function layout(o: { preheader: string; heading: string; badge: string; body: string }): string {
   return `<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(o.heading)}</title></head>
-<body style="margin:0;padding:0;background:${C.paper};">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>${escapeHtml(o.heading)}</title></head>
+<body style="margin:0;padding:0;background:${C.paper};" bgcolor="${C.paper}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapeHtml(o.preheader)}</div>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${C.paper};padding:32px 12px;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" bgcolor="${C.paper}" style="background:${C.paper};padding:32px 12px;">
   <tr><td align="center">
     <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
-      <tr><td style="padding:0 4px 18px;font-family:${FONT};font-size:18px;font-weight:700;color:${C.ink};">
-        <span style="color:${C.blue};font-style:italic;letter-spacing:-0.5px;">iSN</span>
-        <span style="color:${C.line};padding:0 8px;">|</span>${PRODUCT}
+      <tr><td style="padding:0 4px 18px;font-family:${FONT};font-size:19px;font-weight:700;color:${C.ink};">
+        <span style="display:inline-block;background:#ffffff;border-radius:8px;padding:4px 10px;color:${C.logo};font-style:italic;font-size:18px;letter-spacing:-0.5px;">iSN</span>
+        <span style="color:${C.line};padding:0 8px;">|</span>Shopper Match<span style="color:${C.blue};">.AI</span>
       </td></tr>
-      <tr><td style="background:${C.card};border:1px solid ${C.line};border-radius:20px;padding:32px 30px;font-family:${FONT};color:${C.ink};">
+      <tr><td bgcolor="${C.card}" style="background:${C.card};border:1px solid ${C.line};border-radius:20px;padding:32px 30px;font-family:${FONT};color:${C.ink};">
         <div style="margin:0 0 14px;"><span style="display:inline-block;background:${C.blueSoft};color:${C.blue};border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;letter-spacing:.04em;">${escapeHtml(o.badge)}</span></div>
         <h1 style="margin:0 0 14px;font-size:24px;line-height:1.25;color:${C.ink};">${escapeHtml(o.heading)}</h1>
         ${o.body}
       </td></tr>
-      <tr><td style="padding:18px 10px 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.muted};text-align:center;">
+      <tr><td style="padding:18px 10px 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.label};text-align:center;">
         ${escapeHtml(REASON)}<br>
         <span style="color:${C.blue};font-style:italic;font-weight:700;">iSN</span> &nbsp;|&nbsp; ${escapeHtml(TAGLINE)}
       </td></tr>
@@ -72,7 +76,7 @@ function layout(o: { preheader: string; heading: string; badge: string; body: st
 }
 
 const p = (html: string) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${C.muted};">${html}</p>`;
-const label = (t: string) => `<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:${C.muted};">${t}</div>`;
+const label = (t: string) => `<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:${C.label};">${t}</div>`;
 
 function detailsBlock(i: EmailInput): string {
   const row = (name: string, value: string) =>
@@ -97,7 +101,7 @@ export function buildConfirmationEmail(i: EmailInput): Rendered {
       heading: "Your meeting is confirmed",
       body: [
         p(`Hi ${hi}, your call with the iSN team is confirmed. We'll show you what ${PRODUCT} can do for your scheduling process, and answer your questions.`),
-        `<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;margin:6px 0 18px;background:${C.panel};border-radius:14px;">
+        `<table role="presentation" cellspacing="0" cellpadding="0" bgcolor="${C.panel}" style="width:100%;margin:6px 0 18px;background:${C.panel};border:1px solid ${C.line};border-radius:14px;">
           <tr><td style="padding:16px 18px;font-size:14px;line-height:1.6;color:${C.ink};">
             ${label("When")}
             <div style="font-size:16px;font-weight:700;margin-bottom:10px;">${escapeHtml(b.when)}</div>
@@ -107,7 +111,7 @@ export function buildConfirmationEmail(i: EmailInput): Rendered {
             <div style="font-weight:700;">Google Meet video call</div>
           </td></tr>
         </table>`,
-        `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 14px;"><tr><td style="background:${C.cta};border-radius:999px;">
+        `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 14px;"><tr><td bgcolor="${C.cta}" style="background:${C.cta};border:1px solid ${C.ctaBorder};border-radius:999px;">
           <a href="${escapeHtml(b.url)}" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">Join the meeting</a>
         </td></tr></table>`,
         p(`The button not working? Copy this link into your browser:<br><a href="${escapeHtml(b.url)}" style="color:${C.blue};word-break:break-all;">${escapeHtml(b.url)}</a>`),
@@ -185,7 +189,7 @@ export function buildReminderEmail(who: { name?: string }, b: Booking): Rendered
     heading: "You have a booking tomorrow",
     body: [
       p(`Hi ${hi}, this is a reminder about your call with the iSN team.`),
-      `<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;margin:6px 0 18px;background:${C.panel};border-radius:14px;">
+      `<table role="presentation" cellspacing="0" cellpadding="0" bgcolor="${C.panel}" style="width:100%;margin:6px 0 18px;background:${C.panel};border:1px solid ${C.line};border-radius:14px;">
           <tr><td style="padding:16px 18px;font-size:14px;line-height:1.6;color:${C.ink};">
             ${label("When")}
             <div style="font-size:16px;font-weight:700;margin-bottom:10px;">${escapeHtml(b.when)}</div>
@@ -195,7 +199,7 @@ export function buildReminderEmail(who: { name?: string }, b: Booking): Rendered
             <div style="font-weight:700;">Google Meet video call</div>
           </td></tr>
         </table>`,
-      `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 14px;"><tr><td style="background:${C.cta};border-radius:999px;">
+      `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 14px;"><tr><td bgcolor="${C.cta}" style="background:${C.cta};border:1px solid ${C.ctaBorder};border-radius:999px;">
           <a href="${escapeHtml(b.url)}" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">Join the meeting</a>
         </td></tr></table>`,
       p(`The button not working? Copy this link into your browser:<br><a href="${escapeHtml(b.url)}" style="color:${C.blue};word-break:break-all;">${escapeHtml(b.url)}</a>`),
