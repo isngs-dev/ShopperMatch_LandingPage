@@ -173,3 +173,51 @@ export function buildConfirmationEmail(i: EmailInput): Rendered {
   ].join("\n");
   return { subject, text, html };
 }
+
+/** "You have a booking tomorrow": goes to the visitor about 24 hours before the call. */
+export function buildReminderEmail(who: { name?: string }, b: Booking): Rendered {
+  const name = who.name?.trim() || "there";
+  const hi = escapeHtml(firstName(name));
+  const subject = `Reminder: you have a booking tomorrow with ${PRODUCT}`;
+  const html = layout({
+    preheader: `Your call with the iSN team is tomorrow, ${b.whenShort}.`,
+    badge: "Reminder",
+    heading: "You have a booking tomorrow",
+    body: [
+      p(`Hi ${hi}, this is a reminder about your call with the iSN team.`),
+      `<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;margin:6px 0 18px;background:${C.panel};border-radius:14px;">
+          <tr><td style="padding:16px 18px;font-size:14px;line-height:1.6;color:${C.ink};">
+            ${label("When")}
+            <div style="font-size:16px;font-weight:700;margin-bottom:10px;">${escapeHtml(b.when)}</div>
+            ${label("Duration")}
+            <div style="font-weight:700;margin-bottom:10px;">${b.minutes} minutes</div>
+            ${label("Where")}
+            <div style="font-weight:700;">Google Meet video call</div>
+          </td></tr>
+        </table>`,
+      `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 14px;"><tr><td style="background:${C.cta};border-radius:999px;">
+          <a href="${escapeHtml(b.url)}" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">Join the meeting</a>
+        </td></tr></table>`,
+      p(`The button not working? Copy this link into your browser:<br><a href="${escapeHtml(b.url)}" style="color:${C.blue};word-break:break-all;">${escapeHtml(b.url)}</a>`),
+      p(`<a href="${escapeHtml(b.calendarUrl)}" style="color:${C.blue};font-weight:700;">Add to Google Calendar</a><br>Need to change the time? Just reply to this email.`),
+    ].join(""),
+  });
+  const text = [
+    `Hi ${firstName(name)},`,
+    "",
+    "This is a reminder that you have a booking tomorrow with the iSN team.",
+    "",
+    `When: ${b.when}`,
+    `Duration: ${b.minutes} minutes`,
+    "Where: Google Meet video call",
+    `Meeting link: ${b.url}`,
+    "",
+    `Add to Google Calendar: ${b.calendarUrl}`,
+    "Need to change the time? Just reply to this email.",
+    "",
+    "--",
+    REASON,
+    `iSN | ${TAGLINE}`,
+  ].join("\n");
+  return { subject, text, html };
+}

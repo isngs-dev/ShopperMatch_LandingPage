@@ -36,6 +36,8 @@ export async function googleAccessToken(): Promise<string> {
   return json.access_token;
 }
 
+const BOOKING_SOURCE = "shopper-match";
+
 export type CreatedMeeting = { eventId: string; meetLink: string };
 
 export async function createMeetMeeting(req: DemoRequest): Promise<CreatedMeeting> {
@@ -71,6 +73,8 @@ export async function createMeetMeeting(req: DemoRequest): Promise<CreatedMeetin
         start: { dateTime: start.toISOString() },
         end: { dateTime: end.toISOString() },
         attendees: [{ email: req.email, displayName: req.name }],
+        // lets the reminder job find our bookings (and remember which ones it already reminded)
+        extendedProperties: { private: { source: BOOKING_SOURCE } },
         conferenceData: {
           createRequest: { requestId: crypto.randomUUID(), conferenceSolutionKey: { type: "hangoutsMeet" } },
         },
@@ -107,4 +111,73 @@ export async function getBusyIntervals(timeMinISO: string, timeMaxISO: string): 
   if (!res.ok) throw new Error(`Google freeBusy error ${res.status}: ${await res.text()}`);
   const json = (await res.json()) as { calendars?: Record<string, { busy?: { start: string; end: string }[] }> };
   return Object.values(json.calendars ?? {}).flatMap((c) => c.busy ?? []);
+}
+
+export type Booking = {
+  id: string;
+  startMs: number;
+  createdMs: number;
+  attendee?: { email: string; name?: string };
+  meetUrl?: string;
+  reminded: boolean;
+};
+
+/** Website bookings that start between two instants (cancelled events are not returned). */
+export async function listBookings(fromMs: number, toMs: number): Promise<Booking[] | null> {
+  try {
+    const token = await googleAccessToken();
+    const qs = new URLSearchParams({
+      timeMin: new Date(fromMs).toISOString(),
+      timeMax: new Date(toMs).toISOString(),
+      singleEvents: "true",
+      orderBy: "startTime",
+      maxResults: "250",
+      privateExtendedProperty: `source=${BOOKING_SOURCE}`,
+    });
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${calendarId()}/events?${qs}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`Google events error ${res.status}`);
+    const json = (await res.json()) as {
+      items?: {
+        id: string;
+        status?: string;
+        created?: string;
+        start?: { dateTime?: string };
+        hangoutLink?: string;
+        attendees?: { email: string; displayName?: string; self?: boolean; organizer?: boolean }[];
+        extendedProperties?: { private?: Record<string, string> };
+      }[];
+    };
+    return (json.items ?? [])
+      .filter((e) => e.status !== "cancelled" && e.start?.dateTime)
+      .map((e) => {
+        const a = e.attendees?.find((x) => !x.self && !x.organizer);
+        return {
+          id: e.id,
+          startMs: Date.parse(e.start!.dateTime!),
+          createdMs: e.created ? Date.parse(e.created) : 0,
+          attendee: a ? { email: a.email, name: a.displayName } : undefined,
+          meetUrl: e.hangoutLink,
+          reminded: e.extendedProperties?.private?.reminderSent === "1",
+        };
+      });
+  } catch (err) {
+    console.error("[google-calendar] could not list bookings", err);
+    return null;
+  }
+}
+
+/** Remember that the reminder went out so the hourly job never sends it twice. */
+export async function markReminded(eventId: string) {
+  const token = await googleAccessToken();
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${calendarId()}/events/${eventId}?sendUpdates=none`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ extendedProperties: { private: { reminderSent: "1" } } }),
+    },
+  );
+  if (!res.ok) throw new Error(`Google event update error ${res.status}`);
 }

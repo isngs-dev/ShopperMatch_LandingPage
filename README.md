@@ -58,6 +58,20 @@ render.yaml                      # Render blueprint
    - **Meeting booked:** creates a Google Calendar event with a unique Google Meet link, then sends one confirmation mail through the **Gmail API**: the visitor in To, the iSN team (`MAIL_CC`) in Cc. If the slot was taken in the meantime the API returns `409` and the visitor picks another time. If the mail fails, the event is deleted.
    - **No meeting:** sends the same kind of mail without a meeting.
 
+### Day-before reminder
+
+Visitors who book a call get a "You have a booking tomorrow" mail about 24 hours before it.
+`GET /api/reminders` does this: it finds website bookings (tagged on the Google Calendar event) that start within
+the next 24 hours, mails the visitor, and tags the event so it is never reminded twice. Calls booked less than
+24 hours ahead are skipped. It needs a scheduler that calls it **once an hour** with `CRON_SECRET`:
+
+```bash
+curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<your-site>/api/reminders
+```
+
+On Render this is the `shopper-match-reminders` cron job in `render.yaml` (needs `CRON_SECRET` and `SITE_URL`).
+A free alternative is cron-job.org with the same URL and an `Authorization` header.
+
 The mail has no attachment (an "Add to Google Calendar" link instead), which keeps it out of spam folders.
 Without Google credentials, local dev only logs the mail to the console (dry run). In production the API returns an error instead.
 
@@ -74,6 +88,7 @@ Copy `.env.example` to `.env.local`. Never commit real keys.
 | `MAIL_FROM_NAME` | Sender name shown to visitors (default `Shopper Match.AI`) |
 | `MAIL_CC` | iSN team address(es) Cc'd on every confirmation, comma-separated |
 | `MAIL_REPLY_TO` | Optional, where replies go (default `MAIL_FROM_EMAIL`) |
+| `CRON_SECRET` | Secret for `/api/reminders` (the hourly reminder job). Without it the endpoint is disabled |
 | `MEETING_LINK` | Optional fixed link, used only if Google Calendar is not configured |
 | `NEXT_PUBLIC_SITE_URL` | Optional, public site URL for Open Graph tags |
 

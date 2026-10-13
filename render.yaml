@@ -25,3 +25,19 @@ services:
         value: Shopper Match.AI
       - key: MAIL_CC
         sync: false
+      - key: CRON_SECRET
+        sync: false
+
+  # Hourly job: e-mails visitors "you have a booking tomorrow" (calls starting within 24 hours)
+  - type: cron
+    name: shopper-match-reminders
+    runtime: node
+    plan: starter
+    schedule: "0 * * * *"
+    buildCommand: echo "nothing to build"
+    startCommand: curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$SITE_URL/api/reminders"
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+      - key: SITE_URL
+        sync: false

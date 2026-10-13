@@ -1,6 +1,6 @@
 import "server-only";
-import { MEETING_MINUTES, formatMeeting, formatMeetingShort, type DemoRequest } from "@/lib/demoRequest";
-import { buildConfirmationEmail, type EmailInput } from "@/lib/emailTemplate";
+import { MEETING_MINUTES, MEETING_TZ, formatMeeting, formatMeetingShort, type DemoRequest } from "@/lib/demoRequest";
+import { buildConfirmationEmail, buildReminderEmail, type EmailInput } from "@/lib/emailTemplate";
 import { googleConfigured } from "@/lib/googleCalendar";
 import { mailConfig, sendGmail } from "@/lib/gmail";
 
@@ -51,6 +51,30 @@ export async function sendConfirmationEmail(req: DemoRequest, meetLink = ""): Pr
 
   await sendGmail(cfg, { to: { email: req.email, name: req.name }, cc: cfg.cc, subject: mail.subject, text: mail.text, html: mail.html });
   return { sent: true, dryRun: false };
+}
+
+/** Day-before reminder. Only the visitor gets it (no Cc). Returns true when Gmail accepted it. */
+export async function sendReminderEmail(
+  who: { email: string; name?: string },
+  startISO: string,
+  meetUrl: string,
+): Promise<boolean> {
+  const cfg = mailConfig();
+  if (!googleConfigured() || !cfg.fromEmail) return false;
+  const mail = buildReminderEmail(who, {
+    when: safeFormat(formatMeeting, startISO, MEETING_TZ),
+    whenShort: safeFormat(formatMeetingShort, startISO, MEETING_TZ),
+    minutes: MEETING_MINUTES,
+    url: meetUrl,
+    calendarUrl: calendarLink(startISO, meetUrl),
+  });
+  try {
+    await sendGmail(cfg, { to: { email: who.email, name: who.name }, subject: mail.subject, text: mail.text, html: mail.html });
+    return true;
+  } catch (err) {
+    console.error("[mail] reminder failed", err);
+    return false;
+  }
 }
 
 function safeFormat(fn: (iso: string, tz: string) => string, iso: string, tz: string) {
