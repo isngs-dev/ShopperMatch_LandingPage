@@ -20,7 +20,7 @@ export const googleConfigured = () =>
 
 const calendarId = () => encodeURIComponent(process.env.GOOGLE_CALENDAR_ID || "primary");
 
-async function accessToken(): Promise<string> {
+export async function googleAccessToken(): Promise<string> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -39,7 +39,7 @@ async function accessToken(): Promise<string> {
 export type CreatedMeeting = { eventId: string; meetLink: string };
 
 export async function createMeetMeeting(req: DemoRequest): Promise<CreatedMeeting> {
-  const token = await accessToken();
+  const token = await googleAccessToken();
   const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
   const start = new Date(req.meeting!.startISO);
   const end = new Date(start.getTime() + MEETING_MINUTES * 60_000);
@@ -86,7 +86,7 @@ export async function createMeetMeeting(req: DemoRequest): Promise<CreatedMeetin
 /** Best-effort cleanup if the confirmation email fails after the event was created. */
 export async function deleteMeeting(eventId: string) {
   try {
-    const token = await accessToken();
+    const token = await googleAccessToken();
     await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${calendarId()}/events/${eventId}?sendUpdates=none`,
       { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
@@ -98,7 +98,7 @@ export async function deleteMeeting(eventId: string) {
 
 /** Busy intervals on the organiser's calendar between two instants (for greying out slots). */
 export async function getBusyIntervals(timeMinISO: string, timeMaxISO: string): Promise<{ start: string; end: string }[]> {
-  const token = await accessToken();
+  const token = await googleAccessToken();
   const res = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

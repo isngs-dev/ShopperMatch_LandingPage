@@ -41,21 +41,25 @@ src/
     scenes/                      # R3F scenes (one file each)
     ui/                          # Button, Reveal, LazyCanvas, ScheduleModal, ...
   lib/
-    demoRequest.ts               # shared Zod schemas
-    sendgrid.ts                  # confirmation emails
+    demoRequest.ts               # shared Zod schemas + Eastern Time helpers
     googleCalendar.ts            # Google Calendar + Meet
+    gmail.ts                     # Gmail API sender (hand-built MIME, no SDK)
+    mail.ts                      # builds and sends the confirmation mail
+    emailTemplate.ts             # HTML/text of the confirmation mail
 scripts/google-auth.mjs          # one-time helper to get the Google refresh token
+render.yaml                      # Render blueprint
 ```
 
 ## Contact form flow
 
 1. Visitor fills the form and presses **Book a Shopper Match.AI Demo**.
-2. A **Schedule a Meeting** pop-up asks for a date and time. Slots already busy on the organiser's calendar are greyed out. The alternative is **No, thanks, just email me**.
+2. A **Schedule a Meeting** pop-up asks for a date and time (US Eastern Time). Slots already busy on the organiser's calendar are greyed out. The alternative is **No, thanks, just email me**.
 3. `POST /api/demo-request`:
-   - **Meeting booked:** creates a Google Calendar event with a unique Google Meet link, then sends a SendGrid mail with the link and an `.ics` invite. If the slot was taken in the meantime the API returns `409` and the visitor picks another time. If the mail fails, the event is deleted.
-   - **No meeting:** sends a normal SendGrid confirmation mail.
+   - **Meeting booked:** creates a Google Calendar event with a unique Google Meet link, then sends one confirmation mail through the **Gmail API**: the visitor in To, the iSN team (`MAIL_CC`) in Cc. If the slot was taken in the meantime the API returns `409` and the visitor picks another time. If the mail fails, the event is deleted.
+   - **No meeting:** sends the same kind of mail without a meeting.
 
-Without SendGrid credentials, local dev only logs the mail to the console (dry run). In production the API returns an error instead.
+The mail has no attachment (an "Add to Google Calendar" link instead), which keeps it out of spam folders.
+Without Google credentials, local dev only logs the mail to the console (dry run). In production the API returns an error instead.
 
 ## Configuration
 
@@ -63,25 +67,29 @@ Copy `.env.example` to `.env.local`. Never commit real keys.
 
 | Variable | Purpose |
 | --- | --- |
-| `SENDGRID_API_KEY` | SendGrid key with "Mail Send" permission |
-| `SENDGRID_FROM_EMAIL` | Verified sender or an address on an authenticated domain |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth client (type "Desktop app") with the Google Calendar API enabled |
-| `GOOGLE_REFRESH_TOKEN` | Refresh token of the organiser account (see below) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth client (type "Desktop app") with the **Google Calendar API** and **Gmail API** enabled |
+| `GOOGLE_REFRESH_TOKEN` | Refresh token of the organiser account, with the calendar and `gmail.send` scopes (see below) |
 | `GOOGLE_CALENDAR_ID` | Calendar that owns the demo slots (default `primary`) |
-| `MEETING_LINK` | Optional fixed link, used only if Google is not configured |
+| `MAIL_FROM_EMAIL` | Mailbox the mail is sent from: the account that signed in, or one of its "Send mail as" aliases |
+| `MAIL_FROM_NAME` | Sender name shown to visitors (default `Shopper Match.AI`) |
+| `MAIL_CC` | iSN team address(es) Cc'd on every confirmation, comma-separated |
+| `MAIL_REPLY_TO` | Optional, where replies go (default `MAIL_FROM_EMAIL`) |
+| `MEETING_LINK` | Optional fixed link, used only if Google Calendar is not configured |
 | `NEXT_PUBLIC_SITE_URL` | Optional, public site URL for Open Graph tags |
 
 ### Getting the Google refresh token (one time)
 
-1. In Google Cloud Console, enable the **Google Calendar API** and create an OAuth client of type **Desktop app**.
+1. In Google Cloud Console, enable the **Google Calendar API** and the **Gmail API**, and create an OAuth client of type **Desktop app**.
 2. Put its ID and secret into `.env.local`.
 3. Run `node scripts/google-auth.mjs`, open the printed URL, and allow access as the organiser account.
 4. Paste the printed `GOOGLE_REFRESH_TOKEN=...` line into `.env.local`.
 
 If the consent screen shows "app not verified", add the organiser as a test user, or set the app to "Internal" on Google Workspace.
 
-## Deployment
+## Deployment (Render)
 
-Set the environment variables above in your hosting provider. Do not deploy `.env.local`.
-The chatbot widget (`chat.isngs.com`) only works on domains allowed by its server, so add the live domain there.
-Because the form uses API routes, deploy as a Node app (not a static export).
+Deploy as a Node web service, not a static site: the form uses API routes.
+
+- Build command: `npm ci && npm run build`, start command: `npm run start` (see `render.yaml`).
+- Set the environment variables above in Render's Environment tab. Do not deploy `.env.local`.
+- The chatbot widget (`chat.isngs.com`) only works on domains allowed by its server, so add the live domain there.

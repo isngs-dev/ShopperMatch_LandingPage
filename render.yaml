@@ -11,10 +11,6 @@ services:
         value: 22
       - key: NEXT_PUBLIC_SITE_URL
         sync: false
-      - key: SENDGRID_API_KEY
-        sync: false
-      - key: SENDGRID_FROM_EMAIL
-        sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -23,3 +19,9 @@ services:
         sync: false
       - key: GOOGLE_CALENDAR_ID
         value: primary
+      - key: MAIL_FROM_EMAIL
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: Shopper Match.AI
+      - key: MAIL_CC
+        sync: false

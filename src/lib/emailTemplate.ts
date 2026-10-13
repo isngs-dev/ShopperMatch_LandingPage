@@ -1,173 +1,175 @@
-// Pure HTML/text builders for the emails (no imports, so they can be previewed with plain node).
-// Colours follow the website theme: cocoa #442D1C, caramel #84592B, wine #743014, golden batter #E8D1A7.
+// Pure HTML/text builders for the confirmation email (no imports, so they can be previewed with plain node).
+// Layout and palette follow the MS Dashboard confirmation mail: cream page, white card, iSN | product header,
+// blue badge, details panel, wine call-to-action. No attachment (a calendar link instead): it looks less like spam.
 
-const esc = (s: string) =>
+export const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+export type Booking = {
+  /** e.g. "Tuesday, October 14, 2026 at 3:00 PM EDT" */
+  when: string;
+  /** e.g. "Tue, Oct 14, 3:00 PM EDT" (used in the subject) */
+  whenShort: string;
+  minutes: number;
+  url: string;
+  /** "Add to Google Calendar" link */
+  calendarUrl: string;
+};
 
 export type EmailInput = {
   name: string;
   company: string;
   email: string;
   phone: string;
-  /** Present when a call was booked. */
-  booking?: { when: string; minutes: number; link: string };
+  booking?: Booking;
 };
 
+export type Rendered = { subject: string; text: string; html: string };
+
+const C = {
+  paper: "#f6efe6",
+  card: "#ffffff",
+  panel: "#f8f2e9",
+  ink: "#2a211b",
+  muted: "#675a4f",
+  line: "#e6d9c8",
+  blue: "#2f66d4",
+  blueSoft: "#e8eefb",
+  cta: "#b4531f",
+};
 const FONT = "Arial,Helvetica,sans-serif";
+const PRODUCT = "Shopper Match.AI";
+const TAGLINE = "Shopper Match.AI, a product by iSN";
+const REASON =
+  "You're getting this one-time email because you contacted us through the Shopper Match.AI website. Reply to this email and a person on the iSN team will answer.";
 
-function row(label: string, value: string) {
-  return `<tr><td style="padding:12px 0 0 0;font-family:${FONT};">
-    <div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#84592B;">${esc(label)}</div>
-    <div style="font-size:16px;font-weight:bold;color:#442D1C;padding-top:3px;">${value}</div>
-  </td></tr>`;
-}
-
-type Layout = {
-  heading: string;
-  preheader: string;
-  intro: string;
-  details: string;
-  button?: string;
-  note: string;
-  footer: string;
-};
-
-function layout(l: Layout) {
+function layout(o: { preheader: string; heading: string; badge: string; body: string }): string {
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(l.heading)}</title></head>
-<body style="margin:0;padding:0;background:#F4EBDD;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(l.preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4EBDD;">
-  <tr><td align="center" style="padding:32px 16px;">
-    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;">
-      <tr><td style="padding:0 4px 18px 4px;font-family:${FONT};">
-        <span style="font-size:24px;font-weight:bold;font-style:italic;color:#2F5BB7;">iSN</span>
-        <span style="color:#C9B58F;font-size:22px;padding:0 8px;">|</span>
-        <span style="font-size:20px;font-weight:bold;color:#442D1C;">Shopper Match<span style="color:#84592B;">.AI</span></span>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(o.heading)}</title></head>
+<body style="margin:0;padding:0;background:${C.paper};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapeHtml(o.preheader)}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${C.paper};padding:32px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
+      <tr><td style="padding:0 4px 18px;font-family:${FONT};font-size:18px;font-weight:700;color:${C.ink};">
+        <span style="color:${C.blue};font-style:italic;letter-spacing:-0.5px;">iSN</span>
+        <span style="color:${C.line};padding:0 8px;">|</span>${PRODUCT}
       </td></tr>
-      <tr><td style="background:#ffffff;border-radius:20px;padding:34px 32px;border:1px solid #E8D1A7;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="font-family:${FONT};font-size:28px;font-weight:bold;line-height:1.2;color:#442D1C;">${esc(l.heading)}</td></tr>
-          <tr><td style="padding:14px 0 0 0;font-family:${FONT};font-size:16px;line-height:1.6;color:#743014;">${l.intro}</td></tr>
-          <tr><td style="padding:22px 0 0 0;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F8EFDF;border-radius:14px;">
-              <tr><td style="padding:6px 22px 20px 22px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${l.details}</table></td></tr>
-            </table>
-          </td></tr>
-          ${l.button ?? ""}
-          <tr><td style="padding:24px 0 0 0;font-family:${FONT};font-size:14px;line-height:1.6;color:#84592B;">${l.note}</td></tr>
-        </table>
+      <tr><td style="background:${C.card};border:1px solid ${C.line};border-radius:20px;padding:32px 30px;font-family:${FONT};color:${C.ink};">
+        <div style="margin:0 0 14px;"><span style="display:inline-block;background:${C.blueSoft};color:${C.blue};border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;letter-spacing:.04em;">${escapeHtml(o.badge)}</span></div>
+        <h1 style="margin:0 0 14px;font-size:24px;line-height:1.25;color:${C.ink};">${escapeHtml(o.heading)}</h1>
+        ${o.body}
       </td></tr>
-      <tr><td align="center" style="padding:20px 8px 0 8px;font-family:${FONT};font-size:12px;line-height:1.6;color:#84592B;">${l.footer}</td></tr>
+      <tr><td style="padding:18px 10px 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.muted};text-align:center;">
+        ${escapeHtml(REASON)}<br>
+        <span style="color:${C.blue};font-style:italic;font-weight:700;">iSN</span> &nbsp;|&nbsp; ${escapeHtml(TAGLINE)}
+      </td></tr>
     </table>
   </td></tr>
 </table>
 </body></html>`;
 }
 
-function meetButton(link: string) {
-  return `<tr><td align="left" style="padding:26px 0 0 0;">
-        <a href="${esc(link)}" style="display:inline-block;background:#84592B;color:#ffffff;font-family:${FONT};font-size:16px;font-weight:bold;text-decoration:none;padding:14px 28px;border-radius:999px;">Join Google Meet</a>
-      </td></tr>
-      <tr><td style="padding:14px 0 0 0;font-family:${FONT};font-size:13px;line-height:1.5;color:#743014;">
-        Or copy this link: <a href="${esc(link)}" style="color:#743014;">${esc(link)}</a>
-      </td></tr>`;
+const p = (html: string) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${C.muted};">${html}</p>`;
+const label = (t: string) => `<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:${C.muted};">${t}</div>`;
+
+function detailsBlock(i: EmailInput): string {
+  const row = (name: string, value: string) =>
+    `<tr><td style="padding:4px 14px 4px 0;font-size:13px;color:${C.muted};">${name}</td><td style="padding:4px 0;font-size:13px;color:${C.ink};">${escapeHtml(value)}</td></tr>`;
+  return `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:6px 0 4px;border-top:1px solid ${C.line};padding-top:10px;width:100%;">
+    ${row("Name", i.name)}${row("Company", i.company)}${row("Phone", i.phone)}${row("Email", i.email)}
+  </table>`;
 }
 
-/* ---------- Visitor confirmation ---------- */
+const firstName = (n: string) => n.trim().split(/\s+/)[0] || "there";
 
-export function buildSubject(i: EmailInput) {
-  return i.booking ? "Your Shopper Match.AI demo is booked" : "We received your Shopper Match.AI demo request";
-}
+/** The one email visitor (To) and iSN team (Cc) both get. */
+export function buildConfirmationEmail(i: EmailInput): Rendered {
+  const hi = escapeHtml(firstName(i.name));
+  const b = i.booking;
 
-export function buildText(i: EmailInput) {
-  const first = i.name.split(" ")[0];
-  if (i.booking) {
-    return [
-      `Hi ${first},`,
+  if (b) {
+    const subject = `Confirmed: your ${PRODUCT} demo on ${b.whenShort}`;
+    const html = layout({
+      preheader: `Your call with the iSN team is set for ${b.whenShort}. The meeting link is inside.`,
+      badge: "Meeting confirmed",
+      heading: "Your meeting is confirmed",
+      body: [
+        p(`Hi ${hi}, your call with the iSN team is confirmed. We'll show you what ${PRODUCT} can do for your scheduling process, and answer your questions.`),
+        `<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;margin:6px 0 18px;background:${C.panel};border-radius:14px;">
+          <tr><td style="padding:16px 18px;font-size:14px;line-height:1.6;color:${C.ink};">
+            ${label("When")}
+            <div style="font-size:16px;font-weight:700;margin-bottom:10px;">${escapeHtml(b.when)}</div>
+            ${label("Duration")}
+            <div style="font-weight:700;margin-bottom:10px;">${b.minutes} minutes</div>
+            ${label("Where")}
+            <div style="font-weight:700;">Google Meet video call</div>
+          </td></tr>
+        </table>`,
+        `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 14px;"><tr><td style="background:${C.cta};border-radius:999px;">
+          <a href="${escapeHtml(b.url)}" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">Join the meeting</a>
+        </td></tr></table>`,
+        p(`The button not working? Copy this link into your browser:<br><a href="${escapeHtml(b.url)}" style="color:${C.blue};word-break:break-all;">${escapeHtml(b.url)}</a>`),
+        p(`<a href="${escapeHtml(b.calendarUrl)}" style="color:${C.blue};font-weight:700;">Add to Google Calendar</a><br>Need a different time? Just reply to this email.`),
+        `<div style="margin-top:8px;">${label("Details you shared")}</div>`,
+        detailsBlock(i),
+      ].join(""),
+    });
+    const text = [
+      `Hi ${firstName(i.name)},`,
       "",
-      "Thank you for your interest in Shopper Match.AI. Here are the details of your demo call with the iSN team.",
+      `Your call with the iSN team is confirmed. We'll show you what ${PRODUCT} can do for your scheduling process, and answer your questions.`,
       "",
-      `When: ${i.booking.when}`,
-      `Duration: ${i.booking.minutes} minutes`,
-      "Where: Google Meet",
-      `Meeting link: ${i.booking.link}`,
+      `When: ${b.when}`,
+      `Duration: ${b.minutes} minutes`,
+      "Where: Google Meet video call",
+      `Meeting link: ${b.url}`,
       "",
-      "A calendar invite is attached to this email. If you need to change the time, just reply to this email.",
+      `Add to Google Calendar: ${b.calendarUrl}`,
+      "Need a different time? Just reply to this email.",
       "",
-      "The iSN team",
+      "Details you shared:",
+      `Name: ${i.name}`,
+      `Company: ${i.company}`,
+      `Phone: ${i.phone}`,
+      `Email: ${i.email}`,
+      "",
+      "--",
+      REASON,
+      `iSN | ${TAGLINE}`,
     ].join("\n");
+    return { subject, text, html };
   }
-  return [
-    `Hi ${first},`,
+
+  const subject = `Thanks, ${firstName(i.name)}. We've received your ${PRODUCT} request`;
+  const html = layout({
+    preheader: "We have your details. Someone from the iSN team will be in touch shortly.",
+    badge: "Request received",
+    heading: "We've received your details",
+    body: [
+      p(`Hi ${hi}, thanks for getting in touch about ${PRODUCT}. Someone from the iSN team will contact you shortly to show you what it can do for your scheduling process.`),
+      p("Would you rather talk sooner? Just reply to this email."),
+      `<div style="margin-top:8px;">${label("Details you shared")}</div>`,
+      detailsBlock(i),
+    ].join(""),
+  });
+  const text = [
+    `Hi ${firstName(i.name)},`,
     "",
-    "Thank you for your interest in Shopper Match.AI. We received your demo request, and a member of the iSN team will be in touch shortly.",
+    `Thanks for getting in touch about ${PRODUCT}. Someone from the iSN team will contact you shortly to show you what it can do for your scheduling process.`,
     "",
+    "Would you rather talk sooner? Just reply to this email.",
+    "",
+    "Details you shared:",
     `Name: ${i.name}`,
     `Company: ${i.company}`,
-    `Email: ${i.email}`,
     `Phone: ${i.phone}`,
-    "",
-    "The iSN team",
-  ].join("\n");
-}
-
-export function buildHtml(i: EmailInput) {
-  const first = esc(i.name.split(" ")[0]);
-  const b = i.booking;
-  return layout({
-    heading: b ? "Your demo is booked" : "Your demo request is received",
-    preheader: `${b ? "Your demo is booked" : "Your demo request is received"}. ${b ? b.when : "We will be in touch shortly."}`,
-    intro: b
-      ? `Hi ${first}, thank you for your interest in Shopper Match.AI. Here are the details of your demo call with the iSN team.`
-      : `Hi ${first}, thank you for your interest in Shopper Match.AI. We received your request, and a member of the iSN team will be in touch shortly.`,
-    details: b
-      ? row("When", esc(b.when)) + row("Duration", `${b.minutes} minutes`) + row("Where", "Google Meet")
-      : row("Name", esc(i.name)) + row("Company", esc(i.company)) + row("Email", esc(i.email)) + row("Phone", esc(i.phone)),
-    button: b ? meetButton(b.link) : undefined,
-    note: b
-      ? "A calendar invite is attached to this email. If you need to change the time, just reply to this email."
-      : "If any of these details are wrong, just reply to this email.",
-    footer: "Shopper Match.AI, a product by iSN<br>You are receiving this email because you requested a demo on our website.",
-  });
-}
-
-/* ---------- Internal notification to the iSN team ---------- */
-
-export const buildTeamSubject = (i: EmailInput) =>
-  i.booking ? `New demo booked: ${i.name} (${i.company})` : `New demo request: ${i.name} (${i.company})`;
-
-export function buildTeamText(i: EmailInput) {
-  const b = i.booking;
-  return [
-    b ? "A visitor booked a Shopper Match.AI demo call." : "A visitor requested a Shopper Match.AI demo (no call booked, email only).",
-    "",
-    `Name: ${i.name}`,
-    `Company: ${i.company}`,
     `Email: ${i.email}`,
-    `Phone: ${i.phone}`,
-    ...(b ? ["", `When: ${b.when}`, `Duration: ${b.minutes} minutes`, `Meeting link: ${b.link}`] : []),
     "",
-    "Reply to this email to reach the visitor.",
+    "--",
+    REASON,
+    `iSN | ${TAGLINE}`,
   ].join("\n");
-}
-
-export function buildTeamHtml(i: EmailInput) {
-  const b = i.booking;
-  return layout({
-    heading: b ? "New demo booked" : "New demo request",
-    preheader: `${i.name} (${i.company})${b ? `, ${b.when}` : ""}`,
-    intro: b
-      ? "A visitor booked a demo call through the website. The event is on the organiser calendar."
-      : "A visitor requested a demo through the website and chose email only (no call booked).",
-    details:
-      row("Name", esc(i.name)) +
-      row("Company", esc(i.company)) +
-      row("Email", `<a href="mailto:${esc(i.email)}" style="color:#442D1C;">${esc(i.email)}</a>`) +
-      row("Phone", esc(i.phone)) +
-      (b ? row("When", esc(b.when)) + row("Duration", `${b.minutes} minutes`) : ""),
-    button: b ? meetButton(b.link) : undefined,
-    note: "Reply to this email to reach the visitor directly.",
-    footer: "Internal notification from the Shopper Match.AI website.",
-  });
+  return { subject, text, html };
 }

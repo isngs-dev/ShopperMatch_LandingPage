@@ -17,6 +17,7 @@ const redirect = "http://localhost:53682/callback";
 const scope = [
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/calendar.freebusy",
+  "https://www.googleapis.com/auth/gmail.send",
 ].join(" ");
 const url =
   "https://accounts.google.com/o/oauth2/v2/auth?" +

@@ -66,3 +66,12 @@ export function formatMeeting(startISO: string, tz: string = MEETING_TZ): string
 export function todayIn(tz: string = MEETING_TZ): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
+
+/** "Tue, Oct 14, 3:00 PM EDT" (used in the email subject) */
+export function formatMeetingShort(startISO: string, tz: string = MEETING_TZ): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
+  }).formatToParts(new Date(startISO));
+  const g = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+  return `${g("weekday")}, ${g("month")} ${g("day")}, ${g("hour")}:${g("minute")} ${g("dayPeriod")} ${g("timeZoneName")}`;
+}

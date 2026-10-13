@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { demoRequestSchema } from "@/lib/demoRequest";
-import { sendConfirmationEmail } from "@/lib/sendgrid";
+import { sendConfirmationEmail } from "@/lib/mail";
 import { createMeetMeeting, deleteMeeting, googleConfigured, SlotBusyError } from "@/lib/googleCalendar";
 
 export const runtime = "nodejs";
