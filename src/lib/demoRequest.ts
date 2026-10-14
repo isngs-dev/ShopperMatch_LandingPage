@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** 10 US digits, optionally prefixed with country code 1 (digits only, formatting stripped). */
+const US_PHONE_RE = /^1?([2-9]\d{2})([2-9]\d{2})(\d{4})$/;
+
 /** Shared by the contact form (client) and /api/demo-request (server). */
 export const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
@@ -9,10 +12,12 @@ export const contactSchema = z.object({
     .string()
     .trim()
     .min(1, "Phone Number is required")
+    // US (NANP) numbers only: area code and exchange start with 2-9, optional +1 / 1 country code
     .refine(
-      (v) => /^[+()\-.\s\d]+$/.test(v) && v.replace(/\D/g, "").length >= 7 && v.replace(/\D/g, "").length <= 15,
-      "Enter a valid phone number",
-    ),
+      (v) => /^[+()\-.\s\d]+$/.test(v) && US_PHONE_RE.test(v.replace(/\D/g, "")),
+      "Enter a valid US phone number, e.g. (212) 555-0123",
+    )
+    .transform((v) => v.replace(/\D/g, "").replace(US_PHONE_RE, "+1 ($1) $2-$3")),
 });
 export type ContactValues = z.infer<typeof contactSchema>;
 

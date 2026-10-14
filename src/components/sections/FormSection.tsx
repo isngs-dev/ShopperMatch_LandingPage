@@ -228,7 +228,7 @@ export default function FormSection() {
                 <Field id="name" label="Name" autoComplete="name" reg={register("name")} error={errors.name?.message} />
                 <Field id="company" label="Company Name" autoComplete="organization" reg={register("company")} error={errors.company?.message} />
                 <Field id="email" label="Email" type="email" inputMode="email" autoComplete="email" reg={register("email")} error={errors.email?.message} />
-                <Field id="phone" label="Phone Number" type="tel" inputMode="tel" autoComplete="tel" reg={register("phone")} error={errors.phone?.message} />
+                <Field id="phone" label="Phone Number (US)" type="tel" inputMode="tel" autoComplete="tel" reg={register("phone")} error={errors.phone?.message} />
                 <div className="mt-2">
                   <Button type="submit" className="w-full">
                     Book a Shopper Match.AI Demo
