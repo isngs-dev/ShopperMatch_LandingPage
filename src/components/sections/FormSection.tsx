@@ -172,7 +172,12 @@ export default function FormSection() {
         setServerError("That time is no longer available. Please pick another.");
         return;
       }
-      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({}));
+        console.error(`[demo-request] ${res.status}`, error);
+        setServerError(typeof error === "string" ? error : "Something went wrong. Please try again.");
+        return;
+      }
       const when = meeting ? formatMeeting(meeting.startISO, meeting.timeZone) : null;
       setDone({ name: pending.name, when });
       setPending(null);
