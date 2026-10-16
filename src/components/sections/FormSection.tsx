@@ -8,7 +8,7 @@ import LazyCanvas from "@/components/ui/LazyCanvas";
 import Button from "@/components/ui/Button";
 import Mesh from "@/components/ui/Mesh";
 import ScheduleModal from "@/components/ui/ScheduleModal";
-import { contactSchema, formatMeeting, type ContactValues, type MeetingChoice } from "@/lib/demoRequest";
+import { contactSchema, formatMeeting, formatUsPhoneInput, type ContactValues, type MeetingChoice } from "@/lib/demoRequest";
 import { FadeUp, RevealHeading } from "@/components/ui/Reveal";
 import { useQuality } from "@/hooks/useQuality";
 
@@ -149,6 +149,7 @@ export default function FormSection() {
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema), mode: "onTouched", defaultValues: { name: "", company: "", email: "", phone: "" } });
+  const phoneReg = register("phone");
 
   // Step 1: valid contact form -> open the "Schedule a Meeting" pop-up
   const onSubmit = (values: FormValues) => {
@@ -228,7 +229,8 @@ export default function FormSection() {
                 <Field id="name" label="Name" autoComplete="name" reg={register("name")} error={errors.name?.message} />
                 <Field id="company" label="Company Name" autoComplete="organization" reg={register("company")} error={errors.company?.message} />
                 <Field id="email" label="Email" type="email" inputMode="email" autoComplete="email" reg={register("email")} error={errors.email?.message} />
-                <Field id="phone" label="Phone Number (US)" type="tel" inputMode="tel" autoComplete="tel" reg={register("phone")} error={errors.phone?.message} />
+                <Field id="phone" label="Phone Number (US)" type="tel" inputMode="tel" autoComplete="tel"
+                  reg={{ ...phoneReg, onChange: (e) => { e.target.value = formatUsPhoneInput(e.target.value); return phoneReg.onChange(e); } }} error={errors.phone?.message} />
                 <div className="mt-2">
                   <Button type="submit" className="w-full">
                     Book a Shopper Match.AI Demo

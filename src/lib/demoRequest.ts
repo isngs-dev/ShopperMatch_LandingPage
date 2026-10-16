@@ -3,6 +3,14 @@ import { z } from "zod";
 /** 10 US digits, optionally prefixed with country code 1 (digits only, formatting stripped). */
 const US_PHONE_RE = /^1?([2-9]\d{2})([2-9]\d{2})(\d{4})$/;
 
+/** As-you-type mask for the phone field: drops a leading country code 1, caps at 10 digits, "(212) 555-0123". */
+export function formatUsPhoneInput(value: string): string {
+  const d = value.replace(/\D/g, "").replace(/^1/, "").slice(0, 10);
+  if (d.length <= 3) return d && `(${d}`;
+  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
 /** Shared by the contact form (client) and /api/demo-request (server). */
 export const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
