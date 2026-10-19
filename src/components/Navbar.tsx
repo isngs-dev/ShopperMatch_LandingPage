@@ -10,16 +10,32 @@ const links = [
   { id: "about", label: "About" },
 ];
 
-export function Logo({ className = "" }: { className?: string }) {
+/** iSN badge links to isngs.com; pass `onTitleClick` to make "Shopper Match.AI" a back-to-top link. */
+export function Logo({ className = "", onTitleClick }: { className?: string; onTitleClick?: (e: MouseEvent) => void }) {
+  const title = (
+    <>
+      Shopper Match<span className="text-mint">.AI</span>
+    </>
+  );
   return (
     <span className={`inline-flex items-center gap-2 font-display font-bold tracking-tight text-white ${className}`}>
-      <span aria-hidden="true" className="grid h-8 place-items-center rounded-lg bg-white px-2 shadow-[0_0_18px_rgba(232,209,167,0.35)]">
+      <a
+        href="https://isngs.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="iSN website (opens in a new tab)"
+        className="grid h-8 place-items-center rounded-lg bg-white px-2 shadow-[0_0_18px_rgba(232,209,167,0.35)]"
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/isn-logo.png" alt="" width={250} height={96} className="h-5 w-auto" />
-      </span>
-      <span>
-        Shopper Match<span className="text-mint">.AI</span>
-      </span>
+      </a>
+      {onTitleClick ? (
+        <a href="#top" onClick={onTitleClick} aria-label="Shopper Match.AI, back to top" className="rounded-full">
+          {title}
+        </a>
+      ) : (
+        <span>{title}</span>
+      )}
     </span>
   );
 }
@@ -49,9 +65,7 @@ export default function Navbar() {
             : "max-w-7xl border-transparent bg-transparent px-3 py-4 backdrop-blur-0"
         }`}
       >
-        <a href="#top" onClick={go("top")} aria-label="Shopper Match.AI, back to top" className="rounded-full">
-          <Logo className="text-base sm:text-lg" />
-        </a>
+        <Logo className="text-base sm:text-lg" onTitleClick={go("top")} />
         <ul className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
             <li key={l.id}>
